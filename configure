@@ -1,0 +1,170 @@
+#!/usr/bin/env php
+<?php
+
+function ask(string $question, string $default = ''): string
+{
+    $answer = readline($question . ($default ? " ({$default})" : null) . ': ');
+
+    if (!$answer) {
+        return $default;
+    }
+
+    return $answer;
+}
+
+function askWithOptions(string $question, array $options, string $default = ''): string
+{
+    $suggestions = implode(
+        '/',
+        array_map(
+            fn(string $option) => $option === $default ? strtoupper($option) : $option,
+            $options,
+        )
+    );
+
+    $answer = ask("{$question} ({$suggestions})");
+
+    $validOptions = implode(', ', $options);
+
+    while (!in_array($answer, $options)) {
+        if ($default && $answer === '') {
+            $answer = $default;
+
+            break;
+        }
+
+        writeln(PHP_EOL . "Please pick one of the following options: {$validOptions}");
+
+        $answer = ask("{$question} ({$suggestions})");
+    }
+
+    if (!$answer) {
+        $answer = $default;
+    }
+
+    return $answer;
+}
+
+function confirm(string $question, bool $default = false): bool
+{
+    $answer = ask($question . ' (' . ($default ? 'Y/n' : 'y/N') . ')');
+
+    if (!$answer) {
+        return $default;
+    }
+
+    return strtolower($answer) === 'y';
+}
+
+function writeln(string $line): void
+{
+    echo $line . PHP_EOL;
+}
+
+function run(string $command): string
+{
+    return trim(shell_exec($command));
+}
+
+function slugify(string $subject): string
+{
+    return strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $subject), '-'));
+}
+
+function titleCase(string $subject): string
+{
+    return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $subject)));
+}
+
+function replaceInFile(string $file, array $replacements): void
+{
+    $contents = file_get_contents($file);
+
+    file_put_contents(
+        $file,
+        str_replace(
+            array_keys($replacements),
+            array_values($replacements),
+            $contents
+        )
+    );
+}
+
+$gitName    = run('git config user.name');
+$authorName = ask('Имя автора', $gitName);
+
+$gitEmail    = run('git config user.email');
+$authorEmail = ask('Email автора', $gitEmail);
+
+$usernameGuess  = explode(':', run('git config remote.origin.url'))[1] ?? '';
+$usernameGuess  = dirname($usernameGuess);
+$usernameGuess  = basename($usernameGuess);
+$authorUsername = ask('Username автора', $usernameGuess);
+
+$vendorName      = ask('Имя поставщика', $authorUsername);
+$vendorSlug      = slugify($vendorName);
+$vendorNamespace = ucwords($vendorName);
+$vendorNamespace = ask('Пространство имен поставщика', $vendorNamespace);
+
+$currentDirectory = getcwd();
+$folderName       = basename($currentDirectory);
+
+$packageName = ask('Имя пакета', $folderName);
+$packageSlug = slugify($packageName);
+
+$className   = titleCase($packageName);
+$className   = ask('Пространство имен пакета', $className);
+$description = ask('Описание пакета', "Это мой пакет {$packageSlug}");
+
+writeln('------');
+writeln("Автор     : {$authorName} ({$authorUsername}, {$authorEmail})");
+writeln("Поставщик     : {$vendorName} ({$vendorSlug})");
+writeln("Пакет    : {$packageSlug} <{$description}>");
+writeln("Пространство имен поставщика  : {$vendorNamespace}\\{$className}");
+writeln("Пространство имен пакета : {$className}");
+writeln('------');
+
+writeln('Этот скрипт заменит вышеуказанные значения во всех соответствующих файлах в каталоге проекта.');
+
+if (!confirm('Изменять файлы?', true)) {
+    exit(1);
+}
+
+
+$files = [
+    __DIR__ . '/CHANGELOG.md',
+    __DIR__ . '/composer.json',
+    __DIR__ . '/phpunit.xml.dist',
+    __DIR__ . '/phpcs.xml.dist',
+    __DIR__ . '/LICENSE.md',
+    __DIR__ . '/README.md',
+];
+
+foreach ($files as $file) {
+    replaceInFile($file, [
+        ':author_name'         => $authorName,
+        ':author_username'     => $authorUsername,
+        'author@domain.com'    => $authorEmail,
+        ':vendor_name'         => $vendorName,
+        ':vendor_slug'         => $vendorSlug,
+        ':vendor_ns'           => $vendorNamespace,
+        ':package_name'        => $packageName,
+        ':package_slug'        => $packageSlug,
+        ':class_name'          => $className,
+        ':package_description' => $description,
+    ]);
+}
+
+copy(
+    from: __DIR__ . '/phpunit.xml.dist',
+    to:   __DIR__ . '/phpunit.xml'
+);
+
+copy(
+    from: __DIR__ . '/phpcs.xml.dist',
+    to:   __DIR__ . '/phpcs.xml'
+);
+
+confirm('Выполнить "composer install"?') && run('composer install');
+
+confirm('Удалить установочный файл?', true) && unlink(__FILE__);
