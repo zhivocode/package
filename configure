@@ -172,6 +172,6 @@ copy(
     to:   __DIR__ . '/phpcs.xml'
 );
 
-confirm('Выполнить "composer install"?') && run('composer install');
+confirm('Выполнить "composer update"?') && run('composer update');
 
 confirm('Удалить установочный файл?', true) && unlink(__FILE__);
