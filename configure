@@ -133,7 +133,7 @@ if (!confirm('Изменять файлы?', true)) {
 
 $files = [
     __DIR__ . '/CHANGELOG.md',
-    __DIR__ . '/composer.json',
+    __DIR__ . '/composer.json.dist',
     __DIR__ . '/phpunit.xml.dist',
     __DIR__ . '/phpcs.xml.dist',
     __DIR__ . '/LICENSE.md',
@@ -154,6 +154,13 @@ foreach ($files as $file) {
         ':package_description' => $description,
     ]);
 }
+
+touch(__DIR__ . '/composer.json');
+
+rename(
+    from: __DIR__ . '/composer.json.dist',
+    to:   __DIR__ . '/composer.json'
+);
 
 copy(
     from: __DIR__ . '/phpunit.xml.dist',
