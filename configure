@@ -172,6 +172,11 @@ copy(
     to:   __DIR__ . '/phpcs.xml'
 );
 
+rename(
+    from: __DIR__ . '/.github/workflows/run-tests.yml.dist',
+    to:   __DIR__ . '/.github/workflows/run-tests.yml'
+);
+
 confirm('Выполнить "composer update"?') && run('composer update');
 
 confirm('Удалить установочный файл?', true) && unlink(__FILE__);

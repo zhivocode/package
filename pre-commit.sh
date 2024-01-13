@@ -12,9 +12,9 @@ if [ $? -eq 1 ]; then
   exit 1
 fi
 
-which ./vendor/bin/phpunit &> /dev/null
+which ./selftest &> /dev/null
 if [ $? -eq 1 ]; then
-  echo "Please install PHPUNIT"
+  echo "Please install selftest"
   exit 1
 fi
 
@@ -36,12 +36,12 @@ else
   exit 1
 fi
 
-php vendor/bin/phpunit
+php ./selftest
 
 if [ $? -eq 0 ]; then
-  echo "PHPUNIT Passed!"
+  echo "TESTS Passed!"
 else
-  echo "PHPUNIT Failed!"
+  echo "TESTS Failed!"
   exit 1
 fi
 
